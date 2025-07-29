@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MediaCard } from '@/components/MediaCard';
 import { AddMediaDialog } from '@/components/AddMediaDialog';
 import { StatsCard } from '@/components/StatsCard';
-import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('bingelist-items', []);
@@ -112,10 +113,18 @@ const Index = () => {
               </h1>
               <p className="text-muted-foreground text-sm">Track what you've watched + what to watch next</p>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Media
-            </Button>
+            <div className="flex gap-2">
+              <Link to="/trending">
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/10">
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Trending
+                </Button>
+              </Link>
+              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Media
+              </Button>
+            </div>
           </div>
         </div>
       </header>
