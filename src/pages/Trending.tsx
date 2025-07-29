@@ -44,7 +44,7 @@ const Trending = () => {
   const [movieTrending, setMovieTrending] = useState<TMDBItem[]>([]);
   const [tvTrending, setTvTrending] = useState<TMDBItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('bingelist-items', []);
+  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
   const { toast } = useToast();
 
   useEffect(() => {

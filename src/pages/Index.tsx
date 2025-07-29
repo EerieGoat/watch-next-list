@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
-  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('bingelist-items', []);
+  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -109,7 +109,7 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-accent-purple bg-clip-text text-transparent">
-                BingeList
+                Binge List
               </h1>
               <p className="text-muted-foreground text-sm">Track what you've watched + what to watch next</p>
             </div>
