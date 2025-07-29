@@ -1,12 +1,236 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useMemo } from 'react';
+import { MediaItem, WatchStatus, UserStats } from '@/types';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MediaCard } from '@/components/MediaCard';
+import { AddMediaDialog } from '@/components/AddMediaDialog';
+import { StatsCard } from '@/components/StatsCard';
+import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
+  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('bingelist-items', []);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MediaItem | undefined>();
+  const { toast } = useToast();
+
+  // Calculate stats
+  const stats: UserStats = useMemo(() => {
+    const finished = mediaItems.filter(item => item.status === 'finished');
+    const ratings = finished.filter(item => item.rating).map(item => item.rating!);
+    
+    return {
+      totalWatched: finished.length,
+      totalWatching: mediaItems.filter(item => item.status === 'watching').length,
+      totalPlanned: mediaItems.filter(item => item.status === 'plan-to-watch').length,
+      averageRating: ratings.length > 0 ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0
+    };
+  }, [mediaItems]);
+
+  // Filter and search items
+  const filteredItems = useMemo(() => {
+    return mediaItems.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           item.genres.some(genre => genre.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesType = filterType === 'all' || item.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [mediaItems, searchQuery, filterType]);
+
+  const itemsByStatus = useMemo(() => {
+    return {
+      'watching': filteredItems.filter(item => item.status === 'watching'),
+      'plan-to-watch': filteredItems.filter(item => item.status === 'plan-to-watch'),
+      'finished': filteredItems.filter(item => item.status === 'finished')
+    };
+  }, [filteredItems]);
+
+  const handleAddItem = (newItem: Omit<MediaItem, 'id' | 'dateAdded'>) => {
+    const item: MediaItem = {
+      ...newItem,
+      id: Date.now().toString(),
+      dateAdded: new Date().toISOString()
+    };
+    setMediaItems(prev => [item, ...prev]);
+    toast({
+      title: "Added to collection",
+      description: `"${item.title}" has been added to your ${item.status.replace('-', ' ')} list.`,
+    });
+  };
+
+  const handleEditItem = (updatedItem: Omit<MediaItem, 'id' | 'dateAdded'>) => {
+    if (!editingItem) return;
+    
+    const item: MediaItem = {
+      ...updatedItem,
+      id: editingItem.id,
+      dateAdded: editingItem.dateAdded
+    };
+    
+    setMediaItems(prev => prev.map(i => i.id === item.id ? item : i));
+    setEditingItem(undefined);
+    toast({
+      title: "Updated successfully",
+      description: `"${item.title}" has been updated.`,
+    });
+  };
+
+  const handleDeleteItem = (id: string) => {
+    const item = mediaItems.find(i => i.id === id);
+    setMediaItems(prev => prev.filter(i => i.id !== id));
+    toast({
+      title: "Removed from collection",
+      description: item ? `"${item.title}" has been removed.` : "Item removed.",
+      variant: "destructive",
+    });
+  };
+
+  const openEditDialog = (item: MediaItem) => {
+    setEditingItem(item);
+    setIsAddDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsAddDialogOpen(false);
+    setEditingItem(undefined);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-accent-purple bg-clip-text text-transparent">
+                BingeList
+              </h1>
+              <p className="text-muted-foreground text-sm">Track what you've watched + what to watch next</p>
+            </div>
+            <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Media
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Total Watched"
+            value={stats.totalWatched}
+            icon={<CheckCircle2 className="w-6 h-6 text-primary" />}
+          />
+          <StatsCard
+            title="Currently Watching"
+            value={stats.totalWatching}
+            icon={<Eye className="w-6 h-6 text-primary" />}
+          />
+          <StatsCard
+            title="Plan to Watch"
+            value={stats.totalPlanned}
+            icon={<Clock className="w-6 h-6 text-primary" />}
+          />
+          <StatsCard
+            title="Average Rating"
+            value={stats.averageRating || '—'}
+            subtitle={stats.averageRating ? '/10' : 'No ratings yet'}
+            gradient
+            icon={<Star className="w-6 h-6 text-white" />}
+          />
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search titles or genres..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterType} onValueChange={(value) => setFilterType(value as any)}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="movie">Movies Only</SelectItem>
+              <SelectItem value="tv">TV Shows Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Content */}
+        <Tabs defaultValue="watching" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="watching" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Watching ({itemsByStatus.watching.length})
+            </TabsTrigger>
+            <TabsTrigger value="plan-to-watch" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Plan to Watch ({itemsByStatus['plan-to-watch'].length})
+            </TabsTrigger>
+            <TabsTrigger value="finished" className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Finished ({itemsByStatus.finished.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {(['watching', 'plan-to-watch', 'finished'] as WatchStatus[]).map((status) => (
+            <TabsContent key={status} value={status} className="space-y-4">
+              {itemsByStatus[status].length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                    {status === 'watching' && <Eye className="w-8 h-8 text-muted-foreground" />}
+                    {status === 'plan-to-watch' && <Clock className="w-8 h-8 text-muted-foreground" />}
+                    {status === 'finished' && <CheckCircle2 className="w-8 h-8 text-muted-foreground" />}
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No items in {status.replace('-', ' ')}</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {status === 'watching' && "Start tracking what you're currently watching"}
+                    {status === 'plan-to-watch' && "Add titles you want to watch later"}
+                    {status === 'finished' && "Mark items as finished to see them here"}
+                  </p>
+                  <Button onClick={() => setIsAddDialogOpen(true)} variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add First Item
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {itemsByStatus[status].map((item) => (
+                    <MediaCard
+                      key={item.id}
+                      item={item}
+                      onEdit={openEditDialog}
+                      onDelete={handleDeleteItem}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
+
+      {/* Add/Edit Dialog */}
+      <AddMediaDialog
+        open={isAddDialogOpen}
+        onOpenChange={closeDialog}
+        onSave={editingItem ? handleEditItem : handleAddItem}
+        editItem={editingItem}
+      />
     </div>
   );
 };
