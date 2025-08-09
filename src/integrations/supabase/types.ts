@@ -14,7 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          stripe_customer_id: string | null
+          subscription_end: string | null
+          subscription_status: string
+          subscription_tier: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_end?: string | null
+          subscription_status?: string
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_end?: string | null
+          subscription_status?: string
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      watchlist_items: {
+        Row: {
+          created_at: string
+          date_added: string
+          date_finished: string | null
+          genres: string[] | null
+          id: string
+          notes: string | null
+          poster: string | null
+          rating: number | null
+          status: string
+          title: string
+          tmdb_id: string
+          type: string
+          updated_at: string
+          user_id: string
+          watchlist_id: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          date_added?: string
+          date_finished?: string | null
+          genres?: string[] | null
+          id?: string
+          notes?: string | null
+          poster?: string | null
+          rating?: number | null
+          status?: string
+          title: string
+          tmdb_id: string
+          type: string
+          updated_at?: string
+          user_id: string
+          watchlist_id: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          date_added?: string
+          date_finished?: string | null
+          genres?: string[] | null
+          id?: string
+          notes?: string | null
+          poster?: string | null
+          rating?: number | null
+          status?: string
+          title?: string
+          tmdb_id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          watchlist_id?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_items_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watchlists: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
