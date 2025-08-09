@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MediaItem, WatchStatus, UserStats } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,17 +9,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MediaCard } from '@/components/MediaCard';
 import { AddMediaDialog } from '@/components/AddMediaDialog';
 import { StatsCard } from '@/components/StatsCard';
+import PremiumUpsellModal from '@/components/PremiumUpsellModal';
+import UserMenu from '@/components/UserMenu';
 import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
+  const { user, subscription } = useAuth();
   const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MediaItem | undefined>();
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
   const { toast } = useToast();
+
+  const isPremium = subscription?.subscription_status === 'active';
+  const FREE_LIMIT = 10;
 
   // Calculate stats
   const stats: UserStats = useMemo(() => {
@@ -52,6 +61,12 @@ const Index = () => {
   }, [filteredItems]);
 
   const handleAddItem = (newItem: Omit<MediaItem, 'id' | 'dateAdded'>) => {
+    // Check limit for free users
+    if (!isPremium && mediaItems.length >= FREE_LIMIT) {
+      setShowUpsellModal(true);
+      return;
+    }
+
     const item: MediaItem = {
       ...newItem,
       id: Date.now().toString(),
@@ -62,6 +77,26 @@ const Index = () => {
       title: "Added to collection",
       description: `"${item.title}" has been added to your ${item.status.replace('-', ' ')} list.`,
     });
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout');
+      if (error) throw error;
+      
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank');
+      setShowUpsellModal(false);
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start checkout process. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditItem = (updatedItem: Omit<MediaItem, 'id' | 'dateAdded'>) => {
@@ -113,7 +148,7 @@ const Index = () => {
               </h1>
               <p className="text-muted-foreground text-sm">Track what you've watched + what to watch next</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Link to="/trending">
                 <Button variant="outline" className="border-primary/20 hover:bg-primary/10">
                   <TrendingUp className="w-4 h-4 mr-2" />
@@ -123,7 +158,9 @@ const Index = () => {
               <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Media
+                {!isPremium && ` (${FREE_LIMIT - mediaItems.length} left)`}
               </Button>
+              <UserMenu />
             </div>
           </div>
         </div>
@@ -239,6 +276,13 @@ const Index = () => {
         onOpenChange={closeDialog}
         onSave={editingItem ? handleEditItem : handleAddItem}
         editItem={editingItem}
+      />
+      
+      {/* Premium Upsell Modal */}
+      <PremiumUpsellModal
+        open={showUpsellModal}
+        onOpenChange={setShowUpsellModal}
+        onUpgrade={handleUpgrade}
       />
     </div>
   );
