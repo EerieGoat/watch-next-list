@@ -89,6 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Handle email confirmation
+        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+          toast({
+            title: "Email verified!",
+            description: "Your account has been successfully verified.",
+          });
+        }
+        
         if (session?.user) {
           // Defer profile and subscription fetching
           setTimeout(() => {

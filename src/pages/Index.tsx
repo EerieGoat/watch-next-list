@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
-  const { user, subscription } = useAuth();
+  const { user, session, subscription, refreshSubscription } = useAuth();
   const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
@@ -80,15 +80,24 @@ const Index = () => {
   };
 
   const handleUpgrade = async () => {
-    if (!user) return;
+    if (!user || !session) return;
     
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+      
       if (error) throw error;
       
-      // Open Stripe checkout in a new tab
-      window.open(data.url, '_blank');
-      setShowUpsellModal(false);
+      if (data.url) {
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+        setShowUpsellModal(false);
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({
