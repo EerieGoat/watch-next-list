@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MediaItem, WatchStatus, UserStats } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useUrlParams } from '@/hooks/useUrlParams';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { user, session, subscription, refreshSubscription } = useAuth();
+  useUrlParams(); // Handle URL parameters for verification and payment callbacks
   const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'movie' | 'tv'>('all');
