@@ -82,20 +82,34 @@ const Index = () => {
   };
 
   const handleUpgrade = async () => {
-    if (!user || !session) return;
+    if (!user || !session) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upgrade to premium.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
+      console.log('Starting checkout process with token:', session.access_token ? 'Token present' : 'No token');
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         }
       });
       
-      if (error) throw error;
+      console.log('Checkout response:', { data, error });
       
-      if (data.url) {
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+      
+      if (data?.url) {
+        console.log('Redirecting to checkout URL:', data.url);
+        window.location.href = data.url;
         setShowUpsellModal(false);
       } else {
         throw new Error('No checkout URL received');
@@ -103,8 +117,8 @@ const Index = () => {
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({
-        title: "Error",
-        description: "Failed to start checkout process. Please try again.",
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Failed to start checkout process. Please try again.",
         variant: "destructive",
       });
     }

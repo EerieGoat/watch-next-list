@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       toast({
         title: "Check your email",
-        description: "We've sent you a confirmation link.",
+        description: "We've sent you a verification link. Please check your email to complete registration.",
       });
     }
     
