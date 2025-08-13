@@ -12,6 +12,7 @@ import { AddMediaDialog } from '@/components/AddMediaDialog';
 import { StatsCard } from '@/components/StatsCard';
 import PremiumUpsellModal from '@/components/PremiumUpsellModal';
 import UserMenu from '@/components/UserMenu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
@@ -164,59 +165,71 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-border/50 glass sticky top-0 z-40 fade-in">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img 
                 src="/lovable-uploads/42df6338-8d77-43b2-a715-9d055ebff7b5.png" 
-                alt="Binge List Logo" 
-                className="h-12 w-auto"
+                alt="Binge Site Logo" 
+                className="h-12 w-auto transition-transform duration-300 hover:scale-105"
               />
             </div>
             <div className="flex items-center gap-2">
               <Link to="/trending">
-                <Button variant="outline" className="border-primary/20 hover:bg-primary/10">
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Trending
                 </Button>
               </Link>
-              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple">
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)} 
+                className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple transition-all duration-300 hover-lift btn-glow"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Media
                 {!isPremium && ` (${FREE_LIMIT - mediaItems.length} left)`}
               </Button>
+              <ThemeToggle />
               <UserMenu />
             </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-8 space-y-8 slide-up">
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Watched"
-            value={stats.totalWatched}
-            icon={<CheckCircle2 className="w-6 h-6 text-primary" />}
-          />
-          <StatsCard
-            title="Currently Watching"
-            value={stats.totalWatching}
-            icon={<Eye className="w-6 h-6 text-primary" />}
-          />
-          <StatsCard
-            title="Plan to Watch"
-            value={stats.totalPlanned}
-            icon={<Clock className="w-6 h-6 text-primary" />}
-          />
-          <StatsCard
-            title="Average Rating"
-            value={stats.averageRating || '—'}
-            subtitle={stats.averageRating ? '/10' : 'No ratings yet'}
-            gradient
-            icon={<Star className="w-6 h-6 text-white" />}
-          />
+          <div className="fade-in" style={{animationDelay: '0.1s'}}>
+            <StatsCard
+              title="Total Watched"
+              value={stats.totalWatched}
+              icon={<CheckCircle2 className="w-6 h-6 text-primary" />}
+            />
+          </div>
+          <div className="fade-in" style={{animationDelay: '0.2s'}}>
+            <StatsCard
+              title="Currently Watching"
+              value={stats.totalWatching}
+              icon={<Eye className="w-6 h-6 text-primary" />}
+            />
+          </div>
+          <div className="fade-in" style={{animationDelay: '0.3s'}}>
+            <StatsCard
+              title="Plan to Watch"
+              value={stats.totalPlanned}
+              icon={<Clock className="w-6 h-6 text-primary" />}
+            />
+          </div>
+          <div className="fade-in" style={{animationDelay: '0.4s'}}>
+            <StatsCard
+              title="Average Rating"
+              value={stats.averageRating || '—'}
+              subtitle={stats.averageRating ? '/10' : 'No ratings yet'}
+              gradient
+              icon={<Star className="w-6 h-6 text-white" />}
+            />
+          </div>
         </div>
 
         {/* Search and Filters */}
