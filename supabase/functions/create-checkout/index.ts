@@ -50,12 +50,12 @@ serve(async (req) => {
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "gbp",
             product_data: {
               name: "Premium Subscription",
               description: "Access to all premium features"
             },
-            unit_amount: 999, // $9.99 in cents
+            unit_amount: 250, // £2.50 in pence
             recurring: { interval: "month" },
           },
           quantity: 1,

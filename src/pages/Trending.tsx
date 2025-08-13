@@ -50,13 +50,28 @@ const Trending = () => {
   useEffect(() => {
     const fetchTrendingData = async () => {
       try {
-        const [movieRes, tvRes] = await Promise.all([
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}`)
+        // Fetch multiple pages to get 100 items each
+        const moviePages = await Promise.all([
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=1`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=2`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=3`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=4`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=5`)
         ]);
         
-        setMovieTrending(movieRes.data.results.slice(0, 20));
-        setTvTrending(tvRes.data.results.slice(0, 20));
+        const tvPages = await Promise.all([
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=1`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=2`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=3`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=4`),
+          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=5`)
+        ]);
+        
+        const allMovies = moviePages.flatMap(page => page.data.results);
+        const allTvShows = tvPages.flatMap(page => page.data.results);
+        
+        setMovieTrending(allMovies.slice(0, 100));
+        setTvTrending(allTvShows.slice(0, 100));
       } catch (error) {
         console.error('Error fetching trending data:', error);
         toast({

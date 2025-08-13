@@ -149,7 +149,7 @@ const Premium = () => {
                   </div>
                   <CardTitle className="text-2xl">Premium Plan</CardTitle>
                   <div className="text-4xl font-bold mt-2">
-                    $7.99
+                    £2.50
                     <span className="text-lg font-normal text-muted-foreground">/month</span>
                   </div>
                 </CardHeader>

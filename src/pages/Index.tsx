@@ -16,6 +16,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import RandomRecommendation from '@/components/RandomRecommendation';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
@@ -188,6 +189,7 @@ const Index = () => {
                   Browse Genres
                 </Button>
               </Link>
+              <RandomRecommendation />
               <Button 
                 onClick={() => setIsAddDialogOpen(true)} 
                 className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple transition-all duration-300 hover-lift btn-glow"

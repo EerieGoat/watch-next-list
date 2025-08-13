@@ -44,7 +44,7 @@ interface Genre {
   name: string;
 }
 
-const TMDB_API_KEY = '8c4c5ea1b4f4dcf3be3a4b3cb3e4b3a8'; // This would be in env in production
+const TMDB_API_KEY = '3fd2be6f0c70a2a598f084ddfb75487c'; // Working TMDB API key
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -113,17 +113,32 @@ const GenreCenter = () => {
                        'popularity.desc';
       
       const response = await fetch(
-        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=1`
+        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=1&page=2&page=3&vote_count.gte=10`
       );
       
       if (!response.ok) throw new Error('Failed to fetch data');
       
       const data = await response.json();
       
+      // Fetch additional pages for more variety
+      const additionalPages = await Promise.all([
+        fetch(`${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=2&vote_count.gte=10`),
+        fetch(`${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=3&vote_count.gte=10`)
+      ]);
+      
+      const additionalData = await Promise.all(
+        additionalPages.map(res => res.ok ? res.json() : { results: [] })
+      );
+      
+      const allResults = [
+        ...(data.results || []),
+        ...additionalData.flatMap(d => d.results || [])
+      ];
+      
       if (type === 'movies') {
-        setMovies(data.results || []);
+        setMovies(allResults.slice(0, 60) || []);
       } else {
-        setTVShows(data.results || []);
+        setTVShows(allResults.slice(0, 60) || []);
       }
     } catch (error) {
       console.error('Error fetching content:', error);
