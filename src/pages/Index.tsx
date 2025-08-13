@@ -167,11 +167,12 @@ const Index = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-accent-purple bg-clip-text text-transparent">
-                Binge List
-              </h1>
-              <p className="text-muted-foreground text-sm">Track what you've watched + what to watch next</p>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/lovable-uploads/42df6338-8d77-43b2-a715-9d055ebff7b5.png" 
+                alt="Binge List Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <div className="flex items-center gap-2">
               <Link to="/trending">
