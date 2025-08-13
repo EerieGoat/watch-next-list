@@ -8,6 +8,10 @@ import SubscriptionChecker from "./components/SubscriptionChecker";
 import Index from "./pages/Index";
 import Trending from "./pages/Trending";
 import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
+import Premium from "./pages/Premium";
+import GenreCenter from "./pages/GenreCenter";
+import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +27,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/trending" element={<Trending />} />
+            <Route path="/genre-center" element={<GenreCenter />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/premium" element={<Premium />} />
+            <Route path="/success" element={<Success />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

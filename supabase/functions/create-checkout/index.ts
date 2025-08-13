@@ -62,8 +62,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin") || "https://snsewcvnyegsbyfetdxz.supabase.co"}/?payment=success`,
-      cancel_url: `${req.headers.get("origin") || "https://snsewcvnyegsbyfetdxz.supabase.co"}/?payment=cancelled`,
+      success_url: `${req.headers.get("origin") || "https://snsewcvnyegsbyfetdxz.supabase.co"}/success?payment=success`,
+      cancel_url: `${req.headers.get("origin") || "https://snsewcvnyegsbyfetdxz.supabase.co"}/premium?payment=cancelled`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

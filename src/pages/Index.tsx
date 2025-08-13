@@ -182,6 +182,12 @@ const Index = () => {
                   Trending
                 </Button>
               </Link>
+              <Link to="/genre-center">
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift">
+                  <Film className="w-4 h-4 mr-2" />
+                  Browse Genres
+                </Button>
+              </Link>
               <Button 
                 onClick={() => setIsAddDialogOpen(true)} 
                 className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple transition-all duration-300 hover-lift btn-glow"
