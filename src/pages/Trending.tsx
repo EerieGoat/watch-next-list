@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Star, Calendar, TrendingUp, Film, Tv, Plus } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, TrendingUp, Film, Tv, Plus, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { MediaItem } from '@/types';
+import MovieDetailModal from '@/components/MovieDetailModal';
 import axios from 'axios';
 
 // TMDB API key (public, can be stored in code)
@@ -44,48 +45,108 @@ const Trending = () => {
   const [movieTrending, setMovieTrending] = useState<TMDBItem[]>([]);
   const [tvTrending, setTvTrending] = useState<TMDBItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentMoviePage, setCurrentMoviePage] = useState(1);
+  const [currentTvPage, setCurrentTvPage] = useState(1);
+  const [hasMoreMovies, setHasMoreMovies] = useState(true);
+  const [hasMoreTv, setHasMoreTv] = useState(true);
   const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
+  const [activeTab, setActiveTab] = useState<'movies' | 'tv'>('movies');
+  const [selectedMovie, setSelectedMovie] = useState<{ id: number; type: 'movie' | 'tv' } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchTrendingData = async () => {
-      try {
-        // Fetch multiple pages to get 100 items each
-        const moviePages = await Promise.all([
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=1`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=2`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=3`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=4`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=5`)
-        ]);
-        
-        const tvPages = await Promise.all([
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=1`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=2`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=3`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=4`),
-          axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=5`)
-        ]);
-        
-        const allMovies = moviePages.flatMap(page => page.data.results);
-        const allTvShows = tvPages.flatMap(page => page.data.results);
-        
-        setMovieTrending(allMovies.slice(0, 100));
-        setTvTrending(allTvShows.slice(0, 100));
-      } catch (error) {
-        console.error('Error fetching trending data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load trending titles",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchInitialData();
+  }, []);
 
-    fetchTrendingData();
-  }, [toast]);
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      // Fetch first 2 pages for each to get around 40 items initially
+      const [moviePage1, moviePage2, tvPage1, tvPage2] = await Promise.all([
+        axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=1`),
+        axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=2`),
+        axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=1`),
+        axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=2`)
+      ]);
+      
+      setMovieTrending([...moviePage1.data.results, ...moviePage2.data.results]);
+      setTvTrending([...tvPage1.data.results, ...tvPage2.data.results]);
+      setCurrentMoviePage(2);
+      setCurrentTvPage(2);
+    } catch (error) {
+      console.error('Error fetching trending data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load trending titles",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMoreMovies = async () => {
+    if (loadingMore || !hasMoreMovies) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = currentMoviePage + 1;
+      const response = await axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}&page=${nextPage}`);
+      
+      if (response.data.results.length === 0) {
+        setHasMoreMovies(false);
+      } else {
+        setMovieTrending(prev => [...prev, ...response.data.results]);
+        setCurrentMoviePage(nextPage);
+        
+        // Stop at around 200 items to prevent excessive data
+        if (movieTrending.length >= 200) {
+          setHasMoreMovies(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more movies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load more movies",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreTV = async () => {
+    if (loadingMore || !hasMoreTv) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = currentTvPage + 1;
+      const response = await axios.get<TrendingResponse>(`${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&page=${nextPage}`);
+      
+      if (response.data.results.length === 0) {
+        setHasMoreTv(false);
+      } else {
+        setTvTrending(prev => [...prev, ...response.data.results]);
+        setCurrentTvPage(nextPage);
+        
+        // Stop at around 200 items to prevent excessive data
+        if (tvTrending.length >= 200) {
+          setHasMoreTv(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading more TV shows:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load more TV shows",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const isInCollection = (tmdbId: number, type: 'movie' | 'tv') => {
     return mediaItems.some(item => 
@@ -127,7 +188,10 @@ const Trending = () => {
     const inCollection = isInCollection(item.id, type);
 
     return (
-      <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105">
+      <Card 
+        className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer"
+        onClick={() => setSelectedMovie({ id: item.id, type })}
+      >
         <div className="relative">
           <img
             src={item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : '/placeholder.svg'}
@@ -138,7 +202,10 @@ const Trending = () => {
           <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button
               size="sm"
-              onClick={() => addToCollection(item, type)}
+              onClick={(e) => {
+                e.stopPropagation();
+                addToCollection(item, type);
+              }}
               disabled={inCollection}
               className="w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30"
             >
@@ -244,7 +311,7 @@ const Trending = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="movies" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'movies' | 'tv')} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="movies" className="flex items-center gap-2">
               <Film className="w-4 h-4" />
@@ -257,22 +324,74 @@ const Trending = () => {
           </TabsList>
 
           <TabsContent value="movies">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {movieTrending.map((movie) => (
-                <TrendingCard key={movie.id} item={movie} type="movie" />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {movieTrending.map((movie) => (
+                  <TrendingCard key={movie.id} item={movie} type="movie" />
+                ))}
+              </div>
+              {hasMoreMovies && (
+                <div className="text-center">
+                  <Button 
+                    onClick={loadMoreMovies} 
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="border-primary/20 hover:bg-primary/10"
+                  >
+                    {loadingMore ? (
+                      'Loading...'
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Load More Movies
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="tv">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {tvTrending.map((show) => (
-                <TrendingCard key={show.id} item={show} type="tv" />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {tvTrending.map((show) => (
+                  <TrendingCard key={show.id} item={show} type="tv" />
+                ))}
+              </div>
+              {hasMoreTv && (
+                <div className="text-center">
+                  <Button 
+                    onClick={loadMoreTV} 
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="border-primary/20 hover:bg-primary/10"
+                  >
+                    {loadingMore ? (
+                      'Loading...'
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Load More TV Shows
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Movie Detail Modal */}
+      {selectedMovie && (
+        <MovieDetailModal
+          open={!!selectedMovie}
+          onOpenChange={(open) => !open && setSelectedMovie(null)}
+          movieId={selectedMovie.id}
+          mediaType={selectedMovie.type}
+        />
+      )}
     </div>
   );
 };

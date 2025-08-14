@@ -15,9 +15,13 @@ import {
   Tv, 
   TrendingUp,
   Filter,
-  Plus
+  Plus,
+  ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { MediaItem } from '@/types';
+import MovieDetailModal from '@/components/MovieDetailModal';
 
 interface Movie {
   id: number;
@@ -98,14 +102,24 @@ const GenreCenter = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [tvShows, setTVShows] = useState<TVShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [sortBy, setSortBy] = useState<'popularity' | 'rating' | 'release_date'>('popularity');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
+  const [selectedMovie, setSelectedMovie] = useState<{ id: number; type: 'movie' | 'tv' } | null>(null);
 
   const currentGenres = activeTab === 'movies' ? movieGenres : tvGenres;
   const currentContent = activeTab === 'movies' ? movies : tvShows;
 
-  // Fetch content by genre
-  const fetchContentByGenre = async (genreId: number, type: 'movies' | 'tv') => {
-    setIsLoading(true);
+  // Fetch content by genre with pagination
+  const fetchContentByGenre = async (genreId: number, type: 'movies' | 'tv', page: number = 1, reset: boolean = true) => {
+    if (page === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+    
     try {
       const endpoint = type === 'movies' ? 'discover/movie' : 'discover/tv';
       const sortParam = sortBy === 'rating' ? 'vote_average.desc' : 
@@ -113,33 +127,32 @@ const GenreCenter = () => {
                        'popularity.desc';
       
       const response = await fetch(
-        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=1&page=2&page=3&vote_count.gte=10`
+        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=${page}&vote_count.gte=10`
       );
       
       if (!response.ok) throw new Error('Failed to fetch data');
       
       const data = await response.json();
-      
-      // Fetch additional pages for more variety
-      const additionalPages = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=2&vote_count.gte=10`),
-        fetch(`${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=${sortParam}&page=3&vote_count.gte=10`)
-      ]);
-      
-      const additionalData = await Promise.all(
-        additionalPages.map(res => res.ok ? res.json() : { results: [] })
-      );
-      
-      const allResults = [
-        ...(data.results || []),
-        ...additionalData.flatMap(d => d.results || [])
-      ];
+      const results = data.results || [];
       
       if (type === 'movies') {
-        setMovies(allResults.slice(0, 60) || []);
+        if (reset) {
+          setMovies(results);
+        } else {
+          setMovies(prev => [...prev, ...results]);
+        }
       } else {
-        setTVShows(allResults.slice(0, 60) || []);
+        if (reset) {
+          setTVShows(results);
+        } else {
+          setTVShows(prev => [...prev, ...results]);
+        }
       }
+      
+      // Update pagination state
+      setCurrentPage(page);
+      setHasMore(results.length === 20 && page < 50); // TMDB has max 500 pages, we limit to 50 for performance
+      
     } catch (error) {
       console.error('Error fetching content:', error);
       toast({
@@ -149,29 +162,56 @@ const GenreCenter = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
-  // Search content
-  const searchContent = async (query: string, type: 'movies' | 'tv') => {
+  // Load more content
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore || searchQuery.trim()) return;
+    
+    const nextPage = currentPage + 1;
+    await fetchContentByGenre(activeGenre.id, activeTab, nextPage, false);
+  };
+
+  // Search content with pagination
+  const searchContent = async (query: string, type: 'movies' | 'tv', page: number = 1, reset: boolean = true) => {
     if (!query.trim()) return;
     
-    setIsLoading(true);
+    if (page === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+    
     try {
       const endpoint = type === 'movies' ? 'search/movie' : 'search/tv';
       const response = await fetch(
-        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=1`
+        `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
       );
       
       if (!response.ok) throw new Error('Failed to search');
       
       const data = await response.json();
+      const results = data.results || [];
       
       if (type === 'movies') {
-        setMovies(data.results || []);
+        if (reset) {
+          setMovies(results);
+        } else {
+          setMovies(prev => [...prev, ...results]);
+        }
       } else {
-        setTVShows(data.results || []);
+        if (reset) {
+          setTVShows(results);
+        } else {
+          setTVShows(prev => [...prev, ...results]);
+        }
       }
+      
+      setCurrentPage(page);
+      setHasMore(results.length === 20 && page < 20); // Limit search results to 20 pages
+      
     } catch (error) {
       console.error('Error searching content:', error);
       toast({
@@ -181,6 +221,7 @@ const GenreCenter = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -188,6 +229,8 @@ const GenreCenter = () => {
   const handleGenreChange = (genre: Genre) => {
     setActiveGenre(genre);
     setSearchQuery('');
+    setCurrentPage(1);
+    setHasMore(true);
     fetchContentByGenre(genre.id, activeTab);
   };
 
@@ -198,12 +241,16 @@ const GenreCenter = () => {
     const newActiveGenre = newGenres[0];
     setActiveGenre(newActiveGenre);
     setSearchQuery('');
+    setCurrentPage(1);
+    setHasMore(true);
     fetchContentByGenre(newActiveGenre.id, tab);
   };
 
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setCurrentPage(1);
+    setHasMore(true);
     if (searchQuery.trim()) {
       searchContent(searchQuery, activeTab);
     } else {
@@ -214,6 +261,8 @@ const GenreCenter = () => {
   // Handle sort change
   const handleSortChange = (newSort: 'popularity' | 'rating' | 'release_date') => {
     setSortBy(newSort);
+    setCurrentPage(1);
+    setHasMore(true);
     if (searchQuery.trim()) {
       searchContent(searchQuery, activeTab);
     } else {
@@ -317,6 +366,10 @@ const GenreCenter = () => {
               onGenreChange={handleGenreChange}
               content={movies}
               isLoading={isLoading}
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              onItemClick={(id) => setSelectedMovie({ id, type: 'movie' })}
               type="movies"
             />
           </TabsContent>
@@ -328,11 +381,25 @@ const GenreCenter = () => {
               onGenreChange={handleGenreChange}
               content={tvShows}
               isLoading={isLoading}
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              onItemClick={(id) => setSelectedMovie({ id, type: 'tv' })}
               type="tv"
             />
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Movie Detail Modal */}
+      {selectedMovie && (
+        <MovieDetailModal
+          open={!!selectedMovie}
+          onOpenChange={(open) => !open && setSelectedMovie(null)}
+          movieId={selectedMovie.id}
+          mediaType={selectedMovie.type}
+        />
+      )}
     </div>
   );
 };
@@ -344,6 +411,10 @@ interface GenreContentProps {
   onGenreChange: (genre: Genre) => void;
   content: (Movie | TVShow)[];
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  onItemClick: (id: number) => void;
   type: 'movies' | 'tv';
 }
 
@@ -353,12 +424,54 @@ const GenreContent: React.FC<GenreContentProps> = ({
   onGenreChange,
   content,
   isLoading,
+  isLoadingMore,
+  hasMore,
+  onLoadMore,
+  onItemClick,
   type
 }) => {
+  const [mediaItems, setMediaItems] = useLocalStorage<MediaItem[]>('binge-list-items', []);
+  const { toast } = useToast();
+
   const getRatingColor = (rating: number) => {
     if (rating >= 8) return 'text-green-500';
     if (rating >= 6) return 'text-yellow-500';
     return 'text-red-500';
+  };
+
+  const addToWatchlist = (item: Movie | TVShow) => {
+    const title = 'title' in item ? item.title : item.name;
+    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : undefined;
+    const genres = item.genre_ids.map(id => {
+      const genreMap: Record<number, string> = {
+        28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+        99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+        27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
+        10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western', 10759: 'Action & Adventure',
+        10762: 'Kids', 10763: 'News', 10764: 'Reality', 10765: 'Sci-Fi & Fantasy', 10766: 'Soap',
+        10767: 'Talk', 10768: 'War & Politics'
+      };
+      return genreMap[id];
+    }).filter(Boolean);
+
+    const newItem: MediaItem = {
+      id: Date.now().toString(),
+      title,
+      type: type === 'movies' ? 'movie' : 'tv',
+      status: 'plan-to-watch',
+      genres,
+      year,
+      poster: item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : undefined,
+      dateAdded: new Date().toISOString(),
+      notes: item.overview
+    };
+
+    setMediaItems(prev => [newItem, ...prev]);
+    toast({
+      title: "Added to watchlist",
+      description: `"${title}" has been added to your plan to watch list.`,
+    });
   };
 
   return (
@@ -393,40 +506,75 @@ const GenreContent: React.FC<GenreContentProps> = ({
           ))}
         </div>
       ) : content.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {content.map((item) => {
-            const title = 'title' in item ? item.title : item.name;
-            const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-            const year = releaseDate ? new Date(releaseDate).getFullYear() : 'N/A';
-            
-            return (
-              <Card key={item.id} className="glass-card hover:border-primary/30 transition-all hover:scale-105 group">
-                <div className="relative overflow-hidden rounded-t-lg">
-                  <img
-                    src={item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : '/placeholder.svg'}
-                    alt={title}
-                    className="aspect-[2/3] object-cover w-full group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-current text-yellow-500" />
-                    <span className={`text-xs font-medium ${getRatingColor(item.vote_average)}`}>
-                      {item.vote_average.toFixed(1)}
-                    </span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {content.map((item) => {
+              const title = 'title' in item ? item.title : item.name;
+              const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+              const year = releaseDate ? new Date(releaseDate).getFullYear() : 'N/A';
+              
+              return (
+                <Card 
+                  key={item.id} 
+                  className="glass-card hover:border-primary/30 transition-all hover:scale-105 group cursor-pointer"
+                  onClick={() => onItemClick(item.id)}
+                >
+                  <div className="relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : '/placeholder.svg'}
+                      alt={title}
+                      className="aspect-[2/3] object-cover w-full group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-current text-yellow-500" />
+                      <span className={`text-xs font-medium ${getRatingColor(item.vote_average)}`}>
+                        {item.vote_average.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button 
+                        size="sm" 
+                        variant="secondary" 
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToWatchlist(item);
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add to List
+                      </Button>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button size="sm" variant="secondary" className="text-xs">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add to List
-                    </Button>
-                  </div>
-                </div>
-                <CardContent className="p-3">
-                  <h3 className="font-medium text-sm line-clamp-2 mb-1">{title}</h3>
-                  <p className="text-xs text-muted-foreground">{year}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <CardContent className="p-3">
+                    <h3 className="font-medium text-sm line-clamp-2 mb-1">{title}</h3>
+                    <p className="text-xs text-muted-foreground">{year}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="text-center">
+              <Button 
+                onClick={onLoadMore} 
+                disabled={isLoadingMore}
+                variant="outline"
+                className="border-primary/20 hover:bg-primary/10"
+              >
+                {isLoadingMore ? (
+                  'Loading...'
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                    Load More {type === 'movies' ? 'Movies' : 'TV Shows'}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12">
