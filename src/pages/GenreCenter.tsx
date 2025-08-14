@@ -258,16 +258,19 @@ const GenreCenter = () => {
     }
   };
 
-  // Handle sort change
+  // Handle sort change - this now properly refreshes content
   const handleSortChange = (newSort: 'popularity' | 'rating' | 'release_date') => {
     setSortBy(newSort);
     setCurrentPage(1);
     setHasMore(true);
-    if (searchQuery.trim()) {
-      searchContent(searchQuery, activeTab);
-    } else {
-      fetchContentByGenre(activeGenre.id, activeTab);
-    }
+    // Always trigger a new search with current filters
+    setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchContent(searchQuery, activeTab);
+      } else {
+        fetchContentByGenre(activeGenre.id, activeTab);
+      }
+    }, 0);
   };
 
   // Get rating color
@@ -519,23 +522,42 @@ const GenreContent: React.FC<GenreContentProps> = ({
                   className="glass-card hover:border-primary/30 transition-all hover:scale-105 group cursor-pointer"
                   onClick={() => onItemClick(item.id)}
                 >
-                  <div className="relative overflow-hidden rounded-t-lg">
+                  <div className="relative overflow-hidden rounded-t-lg group">
                     <img
                       src={item.poster_path ? `${TMDB_IMAGE_BASE_URL}${item.poster_path}` : '/placeholder.svg'}
                       alt={title}
                       className="aspect-[2/3] object-cover w-full group-hover:scale-110 transition-transform duration-300"
                     />
+                    
+                    {/* Mini Trailer Hover Effect - Premium Feature */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      
+                      {/* Play Button Animation */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                          <div className="w-6 h-6 border-l-8 border-t-4 border-b-4 border-l-white border-t-transparent border-b-transparent ml-1" />
+                        </div>
+                      </div>
+
+                      {/* Animated waves effect */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute top-1/2 left-1/2 w-20 h-20 -translate-x-1/2 -translate-y-1/2 border border-white/30 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
+                        <div className="absolute top-1/2 left-1/2 w-16 h-16 -translate-x-1/2 -translate-y-1/2 border border-white/20 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" style={{ animationDelay: '0.1s' }} />
+                      </div>
+                    </div>
+
                     <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
                       <Star className="h-3 w-3 fill-current text-yellow-500" />
                       <span className={`text-xs font-medium ${getRatingColor(item.vote_average)}`}>
                         {item.vote_average.toFixed(1)}
                       </span>
                     </div>
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <Button 
                         size="sm" 
                         variant="secondary" 
-                        className="text-xs"
+                        className="text-xs w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30"
                         onClick={(e) => {
                           e.stopPropagation();
                           addToWatchlist(item);
