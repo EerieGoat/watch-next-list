@@ -17,6 +17,9 @@ import { Plus, Search, Film, Tv, Star, Eye, Clock, CheckCircle2, TrendingUp } fr
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import RandomRecommendation from '@/components/RandomRecommendation';
+import SmartRecommendations from '@/components/SmartRecommendations';
+import TrendingInMyCountry from '@/components/TrendingInMyCountry';
+import FriendsWatchTogether from '@/components/FriendsWatchTogether';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
@@ -168,35 +171,36 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border/50 glass sticky top-0 z-40 fade-in">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <img 
                 src="/lovable-uploads/42df6338-8d77-43b2-a715-9d055ebff7b5.png" 
                 alt="Binge Site Logo" 
-                className="h-12 w-auto transition-transform duration-300 hover:scale-105"
+                className="h-16 md:h-20 w-auto transition-transform duration-300 hover:scale-105"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Link to="/trending">
-                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Trending
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift text-xs sm:text-sm">
+                  <TrendingUp className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Trending</span>
                 </Button>
               </Link>
               <Link to="/genre-center">
-                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift">
-                  <Film className="w-4 h-4 mr-2" />
-                  Browse Genres
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/10 transition-all duration-300 hover-lift text-xs sm:text-sm">
+                  <Film className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Browse</span>
                 </Button>
               </Link>
               <RandomRecommendation />
               <Button 
                 onClick={() => setIsAddDialogOpen(true)} 
-                className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple transition-all duration-300 hover-lift btn-glow"
+                className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-accent-purple transition-all duration-300 hover-lift btn-glow text-xs sm:text-sm"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Media
-                {!isPremium && ` (${FREE_LIMIT - mediaItems.length} left)`}
+                <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Add Media</span>
+                <span className="sm:hidden">Add</span>
+                {!isPremium && <span className="hidden md:inline"> ({FREE_LIMIT - mediaItems.length} left)</span>}
               </Button>
               <ThemeToggle />
               <UserMenu />
@@ -205,28 +209,28 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8 slide-up">
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8 slide-up">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <div className="fade-in" style={{animationDelay: '0.1s'}}>
             <StatsCard
               title="Total Watched"
               value={stats.totalWatched}
-              icon={<CheckCircle2 className="w-6 h-6 text-primary" />}
+              icon={<CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />}
             />
           </div>
           <div className="fade-in" style={{animationDelay: '0.2s'}}>
             <StatsCard
               title="Currently Watching"
               value={stats.totalWatching}
-              icon={<Eye className="w-6 h-6 text-primary" />}
+              icon={<Eye className="w-5 h-5 md:w-6 md:h-6 text-primary" />}
             />
           </div>
           <div className="fade-in" style={{animationDelay: '0.3s'}}>
             <StatsCard
               title="Plan to Watch"
               value={stats.totalPlanned}
-              icon={<Clock className="w-6 h-6 text-primary" />}
+              icon={<Clock className="w-5 h-5 md:w-6 md:h-6 text-primary" />}
             />
           </div>
           <div className="fade-in" style={{animationDelay: '0.4s'}}>
@@ -235,7 +239,7 @@ const Index = () => {
               value={stats.averageRating || '—'}
               subtitle={stats.averageRating ? '/10' : 'No ratings yet'}
               gradient
-              icon={<Star className="w-6 h-6 text-white" />}
+              icon={<Star className="w-5 h-5 md:w-6 md:h-6 text-white" />}
             />
           </div>
         </div>
@@ -266,31 +270,37 @@ const Index = () => {
         {/* Content */}
         <Tabs defaultValue="watching" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="watching" className="flex items-center gap-2">
-              <Eye className="w-4 h-4" />
-              Watching ({itemsByStatus.watching.length})
+            <TabsTrigger value="watching" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Eye className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Watching</span>
+              <span className="sm:hidden">Watch</span>
+              ({itemsByStatus.watching.length})
             </TabsTrigger>
-            <TabsTrigger value="plan-to-watch" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Plan to Watch ({itemsByStatus['plan-to-watch'].length})
+            <TabsTrigger value="plan-to-watch" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Clock className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Plan to Watch</span>
+              <span className="sm:hidden">Plan</span>
+              ({itemsByStatus['plan-to-watch'].length})
             </TabsTrigger>
-            <TabsTrigger value="finished" className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              Finished ({itemsByStatus.finished.length})
+            <TabsTrigger value="finished" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Finished</span>
+              <span className="sm:hidden">Done</span>
+              ({itemsByStatus.finished.length})
             </TabsTrigger>
           </TabsList>
 
           {(['watching', 'plan-to-watch', 'finished'] as WatchStatus[]).map((status) => (
             <TabsContent key={status} value={status} className="space-y-4">
               {itemsByStatus[status].length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    {status === 'watching' && <Eye className="w-8 h-8 text-muted-foreground" />}
-                    {status === 'plan-to-watch' && <Clock className="w-8 h-8 text-muted-foreground" />}
-                    {status === 'finished' && <CheckCircle2 className="w-8 h-8 text-muted-foreground" />}
+                <div className="text-center py-8 md:py-12">
+                  <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                    {status === 'watching' && <Eye className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground" />}
+                    {status === 'plan-to-watch' && <Clock className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground" />}
+                    {status === 'finished' && <CheckCircle2 className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground" />}
                   </div>
                   <h3 className="text-lg font-semibold mb-2">No items in {status.replace('-', ' ')}</h3>
-                  <p className="text-muted-foreground mb-4">
+                  <p className="text-muted-foreground mb-4 text-sm md:text-base">
                     {status === 'watching' && "Start tracking what you're currently watching"}
                     {status === 'plan-to-watch' && "Add titles you want to watch later"}
                     {status === 'finished' && "Mark items as finished to see them here"}
@@ -301,7 +311,7 @@ const Index = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
                   {itemsByStatus[status].map((item) => (
                     <MediaCard
                       key={item.id}
@@ -315,6 +325,19 @@ const Index = () => {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Smart Recommendations for all users */}
+        <SmartRecommendations />
+
+        {/* Trending in My Country */}
+        <TrendingInMyCountry />
+
+        {/* Premium Features */}
+        {subscription?.subscription_status === 'active' && (
+          <div className="space-y-6">
+            <FriendsWatchTogether />
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Dialog */}
